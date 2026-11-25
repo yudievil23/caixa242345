@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Comandas & PDV - Restaurante Dona Gleicy</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- INTERFACE PRINCIPAL (Oculta na impressão) -->
+    <div id="app-interface" class="no-print">
+        <header class="top-bar">
+            <div class="brand">
+                <div class="brand-badge">DG</div>
+                <div>
+                    <span class="brand-kicker">GESTÃO & PDV • FLUTUANTE CENTRO</span>
+                    <h1>Restaurante <span>Dona Gleicy</span></h1>
+                </div>
+            </div>
+
+            <div class="top-actions">
+                <button id="btn-abrir-chamada" type="button" class="btn-chamada">CHAMADA</button>
+                <button id="btn-abrir-compras" class="btn-secondary" title="Atalho: ALT + 0">Compras (ALT+0)</button>
+                <button id="btn-abrir-comissoes" class="btn-secondary">Comissões</button>
+                <button id="btn-abrir-relatorio" class="btn-secondary">Relatório Financeiro</button>
+                <button id="btn-abrir-historico" class="btn-secondary">Histórico de Vendas</button>
+                <button id="btn-abrir-cadastro" class="btn-secondary">Gerenciar Produtos</button>
+                <select id="select-largura-bobina" title="Largura da Impressora Térmica">
+                    <option value="80mm" selected>Bobina 80mm</option>
+                    <option value="58mm">Bobina 58mm</option>
+                </select>
+            </div>
+        </header>
+
+        <!-- MONITOR DE PEDIDOS NA COZINHA (COM BOTÃO PEDIDO SAÍDO INDIVIDUAL) -->
+        <section id="painel-cozinha-principal" class="cozinha-principal-strip">
+            <div class="cozinha-principal-topo">
+                <div>
+                    <span class="section-kicker">ACOMPANHAMENTO DA COZINHA</span>
+                    <h2>Pedidos Enviados à Cozinha (<span id="contador-pedidos-cozinha">0</span>)</h2>
+                </div>
+                <button id="btn-abrir-chamada-cozinha" type="button" class="btn-outline-sm">Abrir Tela CHAMADA</button>
+            </div>
+            <div id="lista-pedidos-cozinha-principal" class="cozinha-principal-lista">
+                <p class="empty-msg">Nenhum pedido pendente na cozinha no momento.</p>
+            </div>
+        </section>
+
+        <main class="pdv-grid">
+            <!-- COLUNA ESQUERDA: CATÁLOGO DE PRODUTOS -->
+            <section class="card catalogo-section">
+                <div class="section-header">
+                    <div>
+                        <span class="section-kicker">CARDÁPIO DIGITAL</span>
+                        <h2>Produtos Disponíveis</h2>
+                    </div>
+                    <div id="filtros-categoria" class="categorias-tabs"></div>
+                </div>
+
+                <!-- BARRA DE PESQUISA INTELIGENTE DO CARDÁPIO DIGITAL -->
+                <div class="pesquisa-catalogo-box">
+                    <div class="pesquisa-input-wrapper">
+                        <input
+                            type="text"
+                            id="input-pesquisa-catalogo"
+                            placeholder="Buscar no cardápio (ex: suco, graviola, cupuaçu, coca ou parte do nome)..."
+                            autocomplete="off"
+                            aria-label="Pesquisar produtos no cardápio digital"
+                        >
+                        <button
+                            type="button"
+                            id="btn-limpar-pesquisa-catalogo"
+                            class="btn-limpar-busca hidden"
+                            title="Limpar pesquisa"
+                            aria-label="Limpar pesquisa"
+                        >×</button>
+                    </div>
+                </div>
+
+                <div id="lista-produtos-catalogo" class="produtos-grid"></div>
+            </section>
+
+            <!-- COLUNA DIREITA: COMANDA ATUAL E FINALIZAÇÃO -->
+            <section class="card comanda-section">
+                <div class="section-header">
+                    <div>
+                        <span class="section-kicker">ATENDIMENTO ATIVO</span>
+                        <h2>Comanda #<span id="numero-comanda">001</span></h2>
+                    </div>
+                    <button id="btn-limpar-comanda" class="btn-danger-sm">Limpar</button>
+                </div>
+
+                <div class="cliente-info">
+                    <input type="text" id="input-mesa-cliente" placeholder="Mesa ou Nome do Cliente (Ex: Mesa 04 / João)">
+                </div>
+
+                <!-- VENDEDOR RESPONSÁVEL PELA COMANDA -->
+                <div class="vendedor-comanda-box">
+                    <label for="select-vendedor-comanda">Vendedor da Comanda:</label>
+                    <select id="select-vendedor-comanda" aria-label="Selecionar vendedor da comanda"></select>
+                </div>
+
+                <!-- ITENS ADICIONADOS -->
+                <div id="itens-comanda" class="itens-lista">
+                    <p class="empty-msg">Nenhum item adicionado ao pedido.</p>
+                </div>
+
+                <!-- OBSERVAÇÕES MANUAIS -->
+                <div class="observacoes-box">
+                    <label for="input-observacoes">Observações para Cozinha / Atendimento:</label>
+                    <textarea id="input-observacoes" rows="3" placeholder="Ex: Peixe bem passado, sem cebola, mandar talheres..."></textarea>
+                </div>
+
+                <!-- TOTAIS E AÇÃO -->
+                <div class="resumo-financeiro">
+                    <div class="total-row">
+                        <span>Total do Pedido</span>
+                        <strong id="valor-total-display">R$ 0,00</strong>
+                    </div>
+                    <button id="btn-ir-pagamento" class="btn-primary-lg" disabled>Finalizar Pedido / Imprimir →</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- TELA VERTICAL CHAMADA (FORMATO RETRATO ESTILO CELULAR PARA COZINHA) -->
+    <div id="tela-chamada-vertical" class="chamada-vertical-overlay hidden no-print" role="dialog" aria-modal="true" aria-labelledby="titulo-chamada-vertical">
+        <div class="chamada-celular-frame">
+            <header class="chamada-celular-header">
+                <div>
+                    <span class="chamada-kicker">COZINHA • TEMPO REAL</span>
+                    <h2 id="titulo-chamada-vertical">CHAMADA (<span id="chamada-contador-pendentes">0</span>)</h2>
+                </div>
+                <button id="btn-fechar-chamada" type="button" class="btn-close" title="Fechar tela CHAMADA">×</button>
+            </header>
+
+            <div class="chamada-celular-subbar">
+                <span>Atualização automática ativa</span>
+                <span id="chamada-ultima-atualizacao">Sincronizado</span>
+            </div>
+
+            <div id="chamada-lista-pedidos" class="chamada-celular-corpo">
+                <p class="empty-msg">Nenhum pedido pendente na cozinha.</p>
+            </div>
+
+            <footer class="chamada-celular-footer">
+                <span>Restaurante Dona Gleicy</span>
+                <button id="btn-fechar-chamada-rodape" type="button" class="btn-secondary qr-btn-sm">Voltar ao PDV</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- MODAL 1: SELEÇÃO DE FORMA DE PAGAMENTO -->
+    <div id="modal-pagamento" class="modal-overlay hidden no-print">
+        <div class="modal-box">
+            <div class="modal-header" style="border-bottom: none; padding-bottom: 0; margin-bottom: 6px;">
+                <div>
+                    <span class="section-kicker">FECHAMENTO DE PEDIDO</span>
+                    <h3 id="modal-pgto-titulo">Forma de Pagamento</h3>
+                </div>
+                <button type="button" id="btn-fechar-pagamento" class="btn-close" title="Fechar">×</button>
+            </div>
+            <p class="modal-subtitle">
+                <span id="modal-pgto-subtitulo-info">Total a pagar:</span>
+                <strong id="modal-total-valor">R$ 0,00</strong>
+            </p>
+
+            <div class="opcoes-pagamento">
+                <label class="pgto-card">
+                    <input type="radio" name="forma_pagamento" value="PIX" checked>
+                    <span>PIX</span>
+                </label>
+                <label class="pgto-card">
+                    <input type="radio" name="forma_pagamento" value="Cartão de crédito">
+                    <span>Cartão de crédito</span>
+                </label>
+                <label class="pgto-card">
+                    <input type="radio" name="forma_pagamento" value="Cartão de débito">
+                    <span>Cartão de débito</span>
+                </label>
+                <label class="pgto-card">
+                    <input type="radio" name="forma_pagamento" value="Dinheiro">
+                    <span>Dinheiro</span>
+                </label>
+                <label class="pgto-card">
+                    <input type="radio" name="forma_pagamento" value="Vale-consumo da casa">
+                    <span>Vale-consumo da casa</span>
+                </label>
+                <label id="opcao-pgto-pendente" class="pgto-card pgto-card-pendente">
+                    <input type="radio" name="forma_pagamento" value="Pagamento pendente">
+                    <span>Pagamento pendente</span>
+                </label>
+            </div>
+
+            <!-- MÚLTIPLAS FORMAS DE PAGAMENTO -->
+            <div id="secao-multiplos-pagamentos" class="multi-pgto-box">
+                <div class="multi-pgto-topo">
+                    <span>Formas de pagamento da venda</span>
+                    <button type="button" id="btn-adicionar-forma-pagamento" class="btn-outline-sm">
+                        + Adicionar outra forma de pagamento
+                    </button>
+                </div>
+
+                <div id="lista-linhas-pagamento" class="multi-pgto-lista"></div>
+
+                <div id="resumo-conferencia-pagamento" class="multi-pgto-conferencia"></div>
+            </div>
+
+            <div class="modal-footer">
+                <button id="btn-cancelar-pgto" class="btn-secondary">Voltar</button>
+                <button id="btn-confirmar-pagamento" class="btn-primary">Confirmar Pagamento</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 1A: CONFIRMAÇÃO DE IMPRESSÃO PARA PAGAMENTO PENDENTE -->
+    <div id="modal-pendente-imprimir" class="modal-overlay hidden no-print" role="dialog" aria-modal="true" aria-labelledby="pendente-imprimir-titulo">
+        <div class="modal-box">
+            <div class="modal-header" style="border-bottom: none; padding-bottom: 0; margin-bottom: 6px;">
+                <div>
+                    <span class="section-kicker">PAGAMENTO PENDENTE • ENVIO AO HISTÓRICO</span>
+                    <h3 id="pendente-imprimir-titulo">Deseja imprimir esta comanda?</h3>
+                </div>
+                <button type="button" id="btn-fechar-pendente-imprimir" class="btn-close" title="Fechar">×</button>
+            </div>
+            <p class="modal-subtitle">
+                Comanda #<strong id="pendente-imprimir-numero"></strong> —
+                <strong id="pendente-imprimir-cliente"></strong> (<strong id="pendente-imprimir-valor"></strong>)
+            </p>
+            <p class="pos-pgto-aviso">
+                O pedido será enviado ao histórico com status <strong>Pendente</strong> para edição posterior. Escolha como deseja prosseguir:
+            </p>
+
+            <!-- CONFIGURAÇÃO DOS QR CODES PARA IMPRESSÃO DO COMPROVANTE -->
+            <div class="qr-config-box">
+                <div class="qr-config-header">
+                    <span>Configuração dos QR Codes do Comprovante</span>
+                    <button type="button" id="btn-toggle-qr-config-pendente" class="btn-outline-sm">Configurar QR Codes</button>
+                </div>
+                <div id="painel-qr-config-pendente" class="qr-config-painel hidden">
+                    <div class="qr-config-grid">
+                        <div class="qr-item-card">
+                            <span class="qr-item-titulo">QR Code do Wi-Fi da loja</span>
+                            <div class="qr-preview-frame" id="qr-wifi-preview-box-pendente">
+                                <span class="qr-empty-label">Nenhuma imagem salva</span>
+                            </div>
+                            <input type="file" id="input-qr-wifi-pendente" accept="image/*" class="hidden">
+                            <div class="qr-item-actions">
+                                <button type="button" class="btn-outline-sm" onclick="selecionarArquivoQR('wifi', 'pendente')">Adicionar / Editar</button>
+                                <button type="button" class="btn-primary qr-btn-sm" id="btn-salvar-qr-wifi-pendente" onclick="salvarQRCode('wifi', 'pendente')" disabled>Salvar</button>
+                                <button type="button" class="btn-danger-sm qr-btn-sm" id="btn-excluir-qr-wifi-pendente" onclick="excluirQRCode('wifi')">Excluir</button>
+                            </div>
+                        </div>
+
+                        <div class="qr-item-card">
+                            <span class="qr-item-titulo">QR Code do pagamento via Pix</span>
+                            <div class="qr-preview-frame" id="qr-pix-preview-box-pendente">
+                                <span class="qr-empty-label">Nenhuma imagem salva</span>
+                            </div>
+                            <input type="file" id="input-qr-pix-pendente" accept="image/*" class="hidden">
+                            <div class="qr-item-actions">
+                                <button type="button" class="btn-outline-sm" onclick="selecionarArquivoQR('pix', 'pendente')">Adicionar / Editar</button>
+                                <button type="button" class="btn-primary qr-btn-sm" id="btn-salvar-qr-pix-pendente" onclick="salvarQRCode('pix', 'pendente')" disabled>Salvar</button>
+                                <button type="button" class="btn-danger-sm qr-btn-sm" id="btn-excluir-qr-pix-pendente" onclick="excluirQRCode('pix')">Excluir</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer modal-footer-spread pendente-imprimir-acoes">
+                <button type="button" id="btn-pendente-sim-imprimir" class="btn-primary">Sim, imprimir</button>
+                <button type="button" id="btn-pendente-nao-continuar" class="btn-secondary">Não, continuar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 1B: COMPROVANTE APÓS PAGAMENTO CONFIRMADO -->
+    <div id="modal-comprovante-pos-pgto" class="modal-overlay hidden no-print">
+        <div class="modal-box">
+            <div class="modal-header" style="border-bottom: none; padding-bottom: 0; margin-bottom: 6px;">
+                <div>
+                    <span class="section-kicker">REGISTRO CONCLUÍDO</span>
+                    <h3>Pagamento Confirmado</h3>
+                </div>
+                <button type="button" id="btn-fechar-comprovante-pos-x" class="btn-close" title="Fechar">×</button>
+            </div>
+            <p class="modal-subtitle">
+                Comanda #<strong id="pos-pgto-numero"></strong> —
+                <strong id="pos-pgto-forma"></strong> (<strong id="pos-pgto-valor"></strong>)
+            </p>
+            <p class="pos-pgto-aviso">
+                O valor já foi contabilizado no relatório financeiro. Deseja imprimir o comprovante agora?
+            </p>
+
+            <!-- CONFIGURAÇÃO DOS QR CODES PARA IMPRESSÃO DO COMPROVANTE -->
+            <div class="qr-config-box">
+                <div class="qr-config-header">
+                    <span>Configuração dos QR Codes do Comprovante</span>
+                    <button type="button" id="btn-toggle-qr-config-pos" class="btn-outline-sm">Configurar QR Codes</button>
+                </div>
+                <div id="painel-qr-config-pos" class="qr-config-painel hidden">
+                    <div class="qr-qualidade-box" style="margin-bottom: 12px;">
+                        <label for="select-qualidade-qr">Qualidade da imagem:</label>
+                        <select id="select-qualidade-qr">
+                            <option value="0.95">Máxima (95%)</option>
+                            <option value="0.8" selected>Alta (80%)</option>
+                            <option value="0.6">Média (60%)</option>
+                            <option value="0.4">Leve / Térmica (40%)</option>
+                        </select>
+                        <label for="input-largura-max-qr" style="margin-left: 10px;">Largura máx. (px):</label>
+                        <input type="number" id="input-largura-max-qr" value="600" min="150" max="2000" step="50" style="width: 80px;">
+                    </div>
+
+                    <div class="qr-config-grid">
+                        <div class="qr-item-card">
+                            <span class="qr-item-titulo">QR Code do Wi-Fi da loja</span>
+                            <div class="qr-preview-frame" id="qr-wifi-preview-box-pos">
+                                <span class="qr-empty-label">Nenhuma imagem salva</span>
+                            </div>
+                            <input type="file" id="input-qr-wifi-pos" accept="image/*" class="hidden">
+                            <div class="qr-item-actions">
+                                <button type="button" class="btn-outline-sm" onclick="selecionarArquivoQR('wifi', 'pos')">Adicionar / Editar</button>
+                                <button type="button" class="btn-primary qr-btn-sm" id="btn-salvar-qr-wifi-pos" onclick="salvarQRCode('wifi', 'pos')" disabled>Salvar</button>
+                                <button type="button" class="btn-danger-sm qr-btn-sm" id="btn-excluir-qr-wifi-pos" onclick="excluirQRCode('wifi')">Excluir</button>
+                            </div>
+                        </div>
+
+                        <div class="qr-item-card">
+                            <span class="qr-item-titulo">QR Code do pagamento via Pix</span>
+                            <div class="qr-preview-frame" id="qr-pix-preview-box-pos">
+                                <span class="qr-empty-label">Nenhuma imagem salva</span>
+                            </div>
+                            <input type="file" id="input-qr-pix-pos" accept="image/*" class="hidden">
+                            <div class="qr-item-actions">
+                                <button type="button" class="btn-outline-sm" onclick="selecionarArquivoQR('pix', 'pos')">Adicionar / Editar</button>
+                                <button type="button" class="btn-primary qr-btn-sm" id="btn-salvar-qr-pix-pos" onclick="salvarQRCode('pix', 'pos')" disabled>Salvar</button>
+                                <button type="button" class="btn-danger-sm qr-btn-sm" id="btn-excluir-qr-pix-pos" onclick="excluirQRCode('pix')">Excluir</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer modal-footer-spread">
+                <button id="btn-imprimir-comprovante-modal" class="btn-primary">Imprimir comprovante</button>
+                <button id="btn-fechar-pos-pgto" class="btn-secondary">Concluir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: CRUD DE PRODUTOS -->
+    <div id="modal-crud" class="modal-overlay hidden no-print">
+        <div class="modal-box modal-lg">
+            <div class="modal-header">
+                <div>
+                    <span class="section-kicker">CATÁLOGO</span>
+                    <h3>Gerenciamento de Produtos</h3>
+                </div>
+                <button id="btn-fechar-crud" class="btn-close">×</button>
+            </div>
+
+            <form id="form-produto" class="crud-form">
+                <input type="hidden" id="prod-id">
+                <input type="text" id="prod-nome" placeholder="Nome do produto (Ex: Peixe Frito)" required>
+                <input type="number" id="prod-preco" step="0.01" min="0" placeholder="Preço (R$)" required>
+                <input type="text" id="prod-categoria" list="lista-categorias-sugestao" placeholder="Categoria (Ex: Refeições)" required>
+                <datalist id="lista-categorias-sugestao">
+                    <option value="Refeições">
+                    <option value="Lanches">
+                    <option value="Churrasco">
+                    <option value="Bebidas">
+                    <option value="Café da Manhã">
+                </datalist>
+                <button type="submit" id="btn-salvar-prod" class="btn-primary">Salvar Produto</button>
+                <button type="button" id="btn-cancelar-edicao" class="btn-secondary hidden">Cancelar</button>
+            </form>
+
+            <div class="crud-table-wrapper">
+                <table class="crud-table">
+                    <thead>
+                        <tr>
+                            <th>Categoria</th>
+                            <th>Produto</th>
+                            <th>Preço</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-produtos-crud"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: HISTÓRICO DE VENDAS + RELATÓRIO FINANCEIRO -->
+    <div id="modal-historico" class="modal-overlay hidden no-print">
+        <div class="modal-box modal-xl">
+            <div class="modal-header">
+                <div>
+                    <span class="section-kicker">FECHAMENTO DE CAIXA</span>
+                    <h3>Histórico de Vendas & Relatório Financeiro</h3>
+                    <span id="historico-data-referencia" class="historico-subdata"></span>
+                </div>
+                <div class="modal-header-actions">
+                    <button type="button" id="btn-abrir-gerenciar-historico" class="btn-secondary">Gerenciar Histórico</button>
+                    <button type="button" id="btn-imprimir-relatorio-topo" class="btn-primary">Imprimir Relatório</button>
+                    <button id="btn-fechar-historico" class="btn-close">×</button>
+                </div>
+            </div>
+
+            <div class="historico-resumo-cards">
+                <div class="resumo-mini-card">
+                    <span>Total Arrecadado (Pago)</span>
+                    <strong id="resumo-total-pago" class="valor-pago">R$ 0,00</strong>
+                </div>
+                <div class="resumo-mini-card">
+                    <span>Total Pendente</span>
+                    <strong id="resumo-total-pendente" class="valor-pendente">R$ 0,00</strong>
+                </div>
+                <div class="resumo-mini-card">
+                    <span>Comandas Registradas</span>
+                    <strong id="resumo-qtd-vendas">0</strong>
+                </div>
+            </div>
+
+            <div class="historico-controles">
+                <div class="historico-filtros">
+                    <button type="button" class="tab-btn active" data-filtro-status="Todas">Todas</button>
+                    <button type="button" class="tab-btn" data-filtro-status="Pago">Pagas</button>
+                    <button type="button" class="tab-btn" data-filtro-status="Pendente">Pendentes</button>
+                </div>
+                <label class="toggle-escopo">
+                    <input type="checkbox" id="chk-mostrar-todos-dias">
+                    <span>Mostrar todos os dias no histórico</span>
+                </label>
+            </div>
+
+            <!-- LISTA DO HISTÓRICO DE VENDAS -->
+            <div class="historico-lista-wrapper">
+                <div id="lista-historico-vendas" class="historico-lista"></div>
+            </div>
+
+            <!-- SEÇÃO DO RELATÓRIO FINANCEIRO (DIA / MÊS / ANO + RESUMO + GRÁFICO) -->
+            <section id="secao-relatorio-diario" class="relatorio-diario-container">
+                <div class="relatorio-diario-header">
+                    <div>
+                        <span class="section-kicker">CONSOLIDAÇÃO POR PERÍODO E MODALIDADE</span>
+                        <h4>Relatório Financeiro — <span id="relatorio-periodo-titulo"></span></h4>
+                    </div>
+                    <div class="relatorio-acoes-topo">
+                        <button type="button" id="btn-abrir-gerenciar-relatorio" class="btn-secondary">
+                            Gerenciar Histórico
+                        </button>
+                        <button type="button" id="btn-imprimir-relatorio-diario" class="btn-primary">
+                            Imprimir Relatório
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CONTROLES DE PERÍODO: DIA, MÊS E ANO -->
+                <div class="periodo-barra">
+                    <div class="periodo-tabs" role="tablist" aria-label="Período do relatório financeiro">
+                        <button type="button" class="tab-btn active" data-tipo-periodo="dia">Por Dia</button>
+                        <button type="button" class="tab-btn" data-tipo-periodo="mes">Por Mês</button>
+                        <button type="button" class="tab-btn" data-tipo-periodo="ano">Por Ano</button>
+                    </div>
+
+                    <div class="periodo-seletores">
+                        <div id="campo-filtro-dia" class="periodo-campo">
+                            <label for="input-relatorio-dia">Data:</label>
+                            <input type="date" id="input-relatorio-dia">
+                        </div>
+                        <div id="campo-filtro-mes" class="periodo-campo hidden">
+                            <label for="input-relatorio-mes">Mês:</label>
+                            <input type="month" id="input-relatorio-mes">
+                        </div>
+                        <div id="campo-filtro-ano" class="periodo-campo hidden">
+                            <label for="select-relatorio-ano">Ano:</label>
+                            <select id="select-relatorio-ano"></select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RESUMO FINANCEIRO DO PERÍODO SELECIONADO -->
+                <div class="resumo-periodo-grid">
+                    <div class="resumo-periodo-card">
+                        <span>PIX</span>
+                        <strong id="resumo-p-pix">R$ 0,00</strong>
+                    </div>
+                    <div class="resumo-periodo-card">
+                        <span>Cartão de crédito</span>
+                        <strong id="resumo-p-credito">R$ 0,00</strong>
+                    </div>
+                    <div class="resumo-periodo-card">
+                        <span>Cartão de débito</span>
+                        <strong id="resumo-p-debito">R$ 0,00</strong>
+                    </div>
+                    <div class="resumo-periodo-card">
+                        <span>Dinheiro</span>
+                        <strong id="resumo-p-dinheiro">R$ 0,00</strong>
+                    </div>
+                    <div class="resumo-periodo-card destaque-total">
+                        <span>Total geral recebido</span>
+                        <strong id="resumo-p-total-geral">R$ 0,00</strong>
+                    </div>
+                    <div class="resumo-periodo-card">
+                        <span>Comandas registradas</span>
+                        <strong id="resumo-p-qtd-comandas">0</strong>
+                    </div>
+                    <div class="resumo-periodo-card span-2">
+                        <span>Forma de pagamento com maior movimentação</span>
+                        <strong id="resumo-p-maior-movimentacao">Nenhuma movimentação no período</strong>
+                    </div>
+                </div>
+
+                <!-- VALE-CONSUMO DA CASA SEPARADAMENTE -->
+                <div class="vale-consumo-box">
+                    <div>
+                        <span class="vale-consumo-titulo">Vale-consumo da casa (informativo separado — não entra no dinheiro recebido)</span>
+                        <span id="vale-consumo-detalhe" class="vale-consumo-sub">0 comanda(s) no período</span>
+                    </div>
+                    <strong id="vale-consumo-valor">R$ 0,00</strong>
+                </div>
+
+                <div class="relatorio-destaque-lider">
+                    <span id="relatorio-lider-rotulo">Forma de pagamento mais utilizada no período:</span>
+                    <strong id="relatorio-lider-texto">Nenhuma venda paga no período</strong>
+                </div>
+
+                <div class="relatorio-grid">
+                    <!-- TABELA DE MODALIDADES -->
+                    <div class="relatorio-card-interno">
+                        <h5>Arrecadação por Forma de Pagamento</h5>
+                        <div class="relatorio-tabela-wrapper">
+                            <table class="relatorio-table">
+                                <thead>
+                                    <tr>
+                                        <th>Forma de Pagamento</th>
+                                        <th class="text-center">Vendas</th>
+                                        <th class="text-right">Total Recebido</th>
+                                        <th class="text-right">%</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabela-relatorio-pagamentos"></tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td><strong>TOTAL GERAL ARRECADADO</strong></td>
+                                        <td class="text-center"><strong id="relatorio-total-qtd">0</strong></td>
+                                        <td class="text-right"><strong id="relatorio-total-valor">R$ 0,00</strong></td>
+                                        <td class="text-right"><strong>100%</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- GRÁFICO DE BARRAS DAS FORMAS DE PAGAMENTO -->
+                    <div class="relatorio-card-interno">
+                        <div class="grafico-cabecalho-titulo">
+                            <h5 id="grafico-titulo-modalidades">Gráfico por Forma de Pagamento</h5>
+                            <span id="grafico-subtitulo-regra" class="grafico-badge-regra"></span>
+                        </div>
+                        <div id="grafico-relatorio-pagamentos" class="grafico-barras-container"></div>
+                        <p id="grafico-destaque-mensal" class="grafico-destaque-rodape"></p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- MODAL 4: GERENCIAR HISTÓRICO (EXCLUSÃO INDIVIDUAL E DO DIA COM SENHA) -->
+    <div id="modal-gerenciar-historico" class="modal-overlay hidden no-print">
+        <div class="modal-box modal-lg">
+            <div class="modal-header">
+                <div>
+                    <span class="section-kicker">CONTROLE DE EXCLUSÕES • SENHA EXIGIDA</span>
+                    <h3>Gerenciar Histórico</h3>
+                    <p class="historico-subdata">
+                        Referência do dia: <strong id="gerenciar-data-referencia"></strong>
+                    </p>
+                </div>
+                <button type="button" id="btn-fechar-gerenciar-historico" class="btn-close">×</button>
+            </div>
+
+            <div class="gerenciar-bloco">
+                <h4>1. Excluir uma comanda específica</h4>
+                <p class="gerenciar-desc">
+                    Selecione uma comanda do histórico do dia para removê-la individualmente.
+                </p>
+                <div class="gerenciar-linha-selecao">
+                    <select id="select-comanda-excluir"></select>
+                    <button type="button" id="btn-excluir-comanda-especifica" class="btn-danger-sm">
+                        Excluir Comanda Selecionada
+                    </button>
+                </div>
+            </div>
+
+            <div class="gerenciar-bloco gerenciar-bloco-perigo">
+                <h4>2. Excluir todo o histórico do dia</h4>
+                <p class="gerenciar-desc">
+                    Apaga de uma só vez todas as comandas registradas no dia de referência (<strong id="gerenciar-qtd-dia">0</strong> registro(s)).
+                </p>
+                <button type="button" id="btn-excluir-todo-historico-dia" class="btn-danger-sm">
+                    Excluir Todo o Histórico do Dia
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 5: AUTORIZAÇÃO POR SENHA PARA EXCLUSÃO -->
+    <div id="modal-senha-exclusao" class="modal-overlay hidden no-print">
+        <div class="modal-box">
+            <div class="modal-header" style="border-bottom: none; padding-bottom: 0; margin-bottom: 6px;">
+                <div>
+                    <span class="section-kicker">AUTORIZAÇÃO DE SEGURANÇA</span>
+                    <h3>Senha de Autorização</h3>
+                </div>
+                <button type="button" id="btn-fechar-senha-exclusao-x" class="btn-close" title="Fechar">×</button>
+            </div>
+            <p id="senha-exclusao-descricao" class="pos-pgto-aviso"></p>
+            <p id="senha-exclusao-confirmacao-extra" class="alerta-confirmacao-exclusao hidden"></p>
+
+            <div class="campo-senha-box">
+                <label for="input-senha-exclusao">Digite a senha de autorização:</label>
+                <input type="password" id="input-senha-exclusao" autocomplete="off" placeholder="••••••">
+                <span id="erro-senha-exclusao" class="erro-senha-texto hidden">
+                    Senha incorreta. Nenhuma exclusão foi realizada.
+                </span>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" id="btn-cancelar-senha-exclusao" class="btn-secondary">Cancelar</button>
+                <button type="button" id="btn-confirmar-senha-exclusao" class="btn-danger-sm">Confirmar Exclusão</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 6: CONTROLE DE COMPRAS & FECHAMENTO FINANCEIRO (ALT + 0) -->
+    <div id="modal-controle-compras" class="modal-overlay hidden no-print" role="dialog" aria-modal="true">
+        <div class="modal-box modal-xl">
+            <div class="modal-header">
+                <div>
+                    <span class="section-kicker">ATALHO ALT + 0 • FECHAMENTO & COMPRAS</span>
+                    <h3>Controle de Compras & Fechamento Financeiro — Dia <span id="compras-data-exibicao"></span></h3>
+                    <span class="historico-subdata">
+                        Atalhos: <strong>ALT + 0</strong> Fechamento & Compras • <strong>ALT + 1</strong> Retirada (R$) • <strong>ALT + 2</strong> Sobrou Pós-Compras (R$)
+                    </span>
+                </div>
+                <button type="button" id="btn-fechar-compras" class="btn-close">×</button>
+            </div>
+
+            <div class="compras-topo-grid">
+                <div class="periodo-campo">
+                    <label for="compras-data-chave">Data do dia:</label>
+                    <input type="date" id="compras-data-chave">
+                </div>
+                <div class="compras-campo-flex">
+                    <label for="compras-descricao">Descrição / Observação das compras:</label>
+                    <input type="text" id="compras-descricao" placeholder="Ex: Compras no mercado, peixe, gelo, insumos...">
+                </div>
+                <div class="compras-campo-gasto">
+                    <label for="compras-total-gasto">Total gasto nas compras (R$):</label>
+                    <input type="number" id="compras-total-gasto" step="0.01" min="0" value="0.00">
+                </div>
+            </div>
+
+            <div class="compras-tabela-box">
+                <div class="compras-modalidade-header">
+                    <span>Forma de Pagamento</span>
+                    <span>Total Gráfico / Arrecadado</span>
+                    <span>Retirada (R$) [ALT+1]</span>
+                    <span>Sobrou Pós-Compras (R$) [ALT+2]</span>
+                </div>
+                <div class="compras-modalidade-row">
+                    <div class="compras-mod-nome"><strong>PIX</strong></div>
+                    <div class="compras-mod-arrec" id="compras-arrecadado-0">R$ 0,00</div>
+                    <input type="number" id="compras-retirada-0" step="0.01" min="0" value="0.00" aria-label="Retirada PIX">
+                    <input type="number" id="compras-sobra-0" step="0.01" min="0" value="0.00" aria-label="Sobrou PIX">
+                </div>
+                <div class="compras-modalidade-row">
+                    <div class="compras-mod-nome"><strong>Cartão de crédito</strong></div>
+                    <div class="compras-mod-arrec" id="compras-arrecadado-1">R$ 0,00</div>
+                    <input type="number" id="compras-retirada-1" step="0.01" min="0" value="0.00" aria-label="Retirada Cartão de crédito">
+                    <input type="number" id="compras-sobra-1" step="0.01" min="0" value="0.00" aria-label="Sobrou Cartão de crédito">
+                </div>
+                <div class="compras-modalidade-row">
+                    <div class="compras-mod-nome"><strong>Cartão de débito</strong></div>
+                    <div class="compras-mod-arrec" id="compras-arrecadado-2">R$ 0,00</div>
+                    <input type="number" id="compras-retirada-2" step="0.01" min="0" value="0.00" aria-label="Retirada Cartão de débito">
+                    <input type="number" id="compras-sobra-2" step="0.01" min="0" value="0.00" aria-label="Sobrou Cartão de débito">
+                </div>
+                <div class="compras-modalidade-row">
+                    <div class="compras-mod-nome"><strong>Dinheiro</strong></div>
+                    <div class="compras-mod-arrec" id="compras-arrecadado-3">R$ 0,00</div>
+                    <input type="number" id="compras-retirada-3" step="0.01" min="0" value="0.00" aria-label="Retirada Dinheiro">
+                    <input type="number" id="compras-sobra-3" step="0.01" min="0" value="0.00" aria-label="Sobrou Dinheiro">
+                </div>
+                <div class="compras-modalidade-row">
+                    <div class="compras-mod-nome"><strong>Vale-consumo da casa</strong></div>
+                    <div class="compras-mod-arrec" id="compras-arrecadado-4">R$ 0,00</div>
+                    <input type="number" id="compras-retirada-4" step="0.01" min="0" value="0.00" aria-label="Retirada Vale-consumo da casa">
+                    <input type="number" id="compras-sobra-4" step="0.01" min="0" value="0.00" aria-label="Sobrou Vale-consumo da casa">
+                </div>
+            </div>
+
+            <!-- RESUMO DE RETIRADAS, SOBROU PÓS-COMPRAS, FECHAMENTO FINANCEIRO E TOTAL CONSOLIDADO -->
+            <div class="compras-resumo-cards compras-resumo-cards-4">
+                <div class="resumo-mini-card">
+                    <span>Total Retirado (R$)</span>
+                    <strong id="compras-total-retirado" class="valor-pendente">R$ 0,00</strong>
+                </div>
+                <div class="resumo-mini-card">
+                    <span>Sobrou Pós-Compras (R$)</span>
+                    <strong id="compras-total-sobras" class="valor-pago">R$ 0,00</strong>
+                </div>
+                <div class="resumo-mini-card">
+                    <span>Total Gráfico Comparativo</span>
+                    <strong id="compras-total-grafico-ref">R$ 0,00</strong>
+                </div>
+                <div class="resumo-mini-card resumo-periodo-card destaque-total">
+                    <span>Fechamento Financeiro (Gráfico − Retirado)</span>
+                    <strong id="compras-fechamento-liquido" class="valor-pago">R$ 0,00</strong>
+                </div>
+            </div>
+
+            <div class="compras-resumo-cards" style="grid-template-columns: 1fr;">
+                <div class="resumo-mini-card resumo-periodo-card destaque-total">
+                    <span>Total Consolidado (Total Gráfico Comparativo + Sobrou Pós-Compras)</span>
+                    <strong id="compras-total-consolidado" class="valor-pago">R$ 0,00</strong>
+                </div>
+            </div>
+
+            <!-- LISTA INTEGRADA DE RETIRADAS (ALT + 1) -->
+            <div class="compras-sobras-box">
+                <div class="compras-secao-topo">
+                    <h5>Retiradas Registradas (ALT + 1) — Edição Direta</h5>
+                    <button type="button" id="btn-atalho-abrir-retirada" class="btn-outline-sm">Abrir Retirada (ALT + 1)</button>
+                </div>
+                <div id="compras-lista-retiradas-dia" class="historico-lista"></div>
+            </div>
+
+            <!-- CONTROLE DE SOBROU PÓS-COMPRAS (ALT + 2) -->
+            <div class="compras-sobras-box">
+                <div class="compras-secao-topo">
+                    <h5>Sobrou Pós-Compras (ALT + 2) — Por Forma de Pagamento</h5>
+                    <button type="button" id="btn-atalho-abrir-sobra" class="btn-outline-sm">Sobrou Pós-Compras (ALT + 2)</button>
+                </div>
+                <div id="compras-sobras-diferentes-zero" class="compras-sobras-lista"></div>
+            </div>
+
+            <div class="modal-footer modal-footer-spread">
+                <button type="button" id="btn-corrigir-compras" class="btn-secondary">CORRIGIR</button>
+                <button type="button" id="btn-salvar-compras" class="btn-primary">SALVAR</button>
+            </div>
+
+            <div class="compras-historico-box">
+                <h5>Registros Salvos no Histórico Financeiro do Dia</h5>
+                <div id="lista-historico-compras-dia" class="historico-lista"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 6A: RETIRADA (R$) BLOQUEADA POR PADRÃO — LIBERADA POR ALT + 1 -->
+    <div id="modal-retirada-atalho" class="modal-overlay hidden no-print" role="dialog" aria-modal="true" aria-labelledby="titulo-retirada-atalho">
+        <div class="modal-box modal-lg">
+            <div class="modal-header">
+                <div>
+                    <span class="section-kicker">COMANDO ALT + 1 • CONTROLE DE RETIRADAS</span>
+                    <h3 id="titulo-retirada-atalho">Retirada (R$) — Dia <span id="retirada-data-exibicao"></span></h3>
+                    <span class="historico-subdata">
+                        Total Retirado (R$): <strong id="retirada-modal-total-acumulado" style="color: var(--accent);">R$ 0,00</strong>
+                    </span>
+                </div>
+                <button type="button" id="btn-fechar-retirada-atalho" class="btn-close">×</button>
+            </div>
+
+            <form id="form-retirada-atalho" class="retirada-form-grid">
+                <div>
+                    <label for="input-retirada-valor">Valor da retirada (R$):</label>
+                    <input type="text" inputmode="decimal" id="input-retirada-valor" placeholder="Ex: 50,00" required>
+                </div>
+                <div>
+                    <label for="select-retirada-forma">Forma de pagamento:</label>
+                    <select id="select-retirada-forma" aria-label="Forma de pagamento da retirada">
+                        <option value="PIX">PIX</option>
+                        <option value="Cartão de crédito">Cartão de crédito</option>
+                        <option value="Cartão de débito">Cartão de débito</option>
+                        <option value="Dinheiro">Dinheiro</option>
+                        <option value="Vale-consumo">Vale-consumo</option>
+                        <option value="Consumo da casa">Consumo da casa</option>
+                    </select>
+                </div>
+                <div class="retirada-form-acoes">
+                    <button type="submit" id="btn-salvar-retirada-atalho" class="btn-primary">Salvar Retirada</button>
+                    <button type="button" id="btn-cancelar-edicao-retirada" class="btn-secondary hidden">Cancelar Edição</button>
+                </div>
+            </form>
+
+            <div class="compras-sobras-box">
+                <h5>Retiradas Cadastradas no Dia (Clique em Editar para alterar sem duplicar)</h5>
+                <div id="lista-retiradas-cadastradas" class="historico-lista"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 6B: SOBROU PÓS-COMPRAS (R$) — COMANDO ALT + 2 -->
+    <div id="modal-sobra-pos-compras" class="modal-overlay hidden no-print" role="dialog" aria-modal="true" aria-labelledby="titulo-sobra-pos-compras">
+        <div class="modal-box modal-lg">
+            <div class="modal-header">
+                <div>
+                    <span class="section-kicker">COMANDO ALT + 2 • FECHAMENTO FINANCEIRO</span>
+                    <h3 id="titulo-sobra-pos-compras">Sobrou Pós-Compras (R$) — Dia <span id="sobra-data-exibicao"></span></h3>
+                    <span class="historico-subdata">
+                        Atualiza automaticamente <strong>Sobrou Pós-Compras (R$)</strong>, <strong>Fechamento Financeiro</strong> e <strong>Total Consolidado</strong>.
+                    </span>
+                </div>
+                <button type="button" id="btn-fechar-sobra-pos-compras" class="btn-close">×</button>
+            </div>
+
+            <div class="sobra-modal-grid">
+                <div>
+                    <label for="select-sobra-forma">Forma de pagamento:</label>
+                    <select id="select-sobra-forma" aria-label="Forma de pagamento do valor que sobrou pós-compras">
+                        <option value="PIX">PIX</option>
+                        <option value="Cartão de crédito">Cartão de crédito</option>
+                        <option value="Cartão de débito">Cartão de débito</option>
+                        <option value="Dinheiro">Dinheiro</option>
+                        <option value="Vale-consumo">Vale-consumo</option>
+                        <option value="Consumo da casa">Consumo da casa</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="input-sobra-valor">Valor que sobrou pós-compras (R$):</label>
+                    <input type="text" inputmode="decimal" id="input-sobra-valor" placeholder="Ex: 200,00">
+                </div>
+                <div class="retirada-form-acoes">
+                    <button type="button" id="btn-salvar-sobra-pos-compras" class="btn-primary">Salvar Valor</button>
+                </div>
+            </div>
+
+            <div class="compras-sobras-box">
+                <h5>Valores Registrados em Sobrou Pós-Compras (R$) — Edição Direta</h5>
+                <div id="lista-sobras-cadastradas" class="historico-lista"></div>
+            </div>
+
+            <div class="compras-resumo-cards compras-resumo-cards-4" style="margin-top: 12px; margin-bottom: 0;">
+                <div class="resumo-mini-card">
+                    <span>Sobrou Pós-Compras (R$)</span>
+                    <strong id="sobra-modal-total-exibicao" class="valor-pago">R$ 0,00</strong>
+                </div>
+                <div class="resumo-mini-card">
+                    <span>Total Gráfico Comparativo</span>
+                    <strong id="sobra-modal-grafico-exibicao">R$ 0,00</strong>
+                </div>
+                <div class="resumo-mini-card resumo-periodo-card destaque-total">
+                    <span>Fechamento Financeiro</span>
+                    <strong id="sobra-modal-fechamento-exibicao" class="valor-pago">R$ 0,00</strong>
+                </div>
+                <div class="resumo-mini-card resumo-periodo-card destaque-total">
+                    <span>Total Consolidado</span>
+                    <strong id="sobra-modal-consolidado-exibicao" class="valor-pago">R$ 0,00</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 7: EDITAR / CORRIGIR COMANDA DO HISTÓRICO -->
+    <div id="modal-editar-comanda" class="modal-overlay hidden no-print" role="dialog" aria-modal="true">
+        <div class="modal-box modal-lg">
+            <div class="modal-header">
+                <div>
+                    <span id="editar-comanda-kicker" class="section-kicker">EDIÇÃO DE COMANDA</span>
+                    <h3 id="editar-comanda-titulo">Editar Comanda</h3>
+                </div>
+                <button type="button" id="btn-fechar-editar-comanda" class="btn-close">×</button>
+            </div>
+
+            <div class="edicao-comanda-topo">
+                <div>
+                    <label for="editar-comanda-cliente">Mesa / Cliente / Local:</label>
+                    <input type="text" id="editar-comanda-cliente">
+                </div>
+                <div>
+                    <label for="editar-comanda-status">Situação do Pagamento:</label>
+                    <select id="editar-comanda-status">
+                        <option value="Pendente">Pendente</option>
+                        <option value="Pago">Pago</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="edicao-adicionar-linha">
+                <select id="select-novo-item-edicao"></select>
+                <input type="number" id="input-novo-preco-edicao" step="0.01" min="0" placeholder="Preço unit. (R$)">
+                <input type="number" id="input-nova-qtd-edicao" step="1" min="1" value="1" placeholder="Qtd">
+                <button type="button" id="btn-adicionar-item-edicao" class="btn-outline-sm">+ Adicionar Item</button>
+            </div>
+
+            <div class="crud-table-wrapper">
+                <table class="crud-table">
+                    <thead>
+                        <tr>
+                            <th>Produto</th>
+                            <th>Preço Unit. (R$)</th>
+                            <th>Qtd</th>
+                            <th>Subtotal</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-itens-edicao-comanda"></tbody>
+                </table>
+            </div>
+
+            <div class="observacoes-box" style="margin-top: 12px;">
+                <label for="editar-comanda-obs">Observações:</label>
+                <textarea id="editar-comanda-obs" rows="2"></textarea>
+            </div>
+
+            <div class="edicao-totais-resumo">
+                <div><span>Subtotal dos Produtos:</span> <strong id="edicao-subtotal-valor">R$ 0,00</strong></div>
+                <div><span>Total da Comanda:</span> <strong id="edicao-total-valor">R$ 0,00</strong></div>
+                <div><span>Falta Pagar:</span> <strong id="edicao-falta-pagar-valor">R$ 0,00</strong></div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" id="btn-cancelar-editar-comanda" class="btn-secondary">Cancelar</button>
+                <button type="button" id="btn-salvar-editar-comanda" class="btn-primary">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 8: COMISSÃO DE VENDEDORES, METAS MENSAIS E HISTÓRICO PERMANENTE -->
+    <div id="modal-comissoes" class="modal-overlay hidden no-print" role="dialog" aria-modal="true" aria-labelledby="comissoes-modal-titulo">
+        <div class="modal-box modal-xl">
+            <div class="modal-header">
+                <div>
+                    <span class="section-kicker">DESEMPENHO, METAS MENSAIS & HISTÓRICO PERMANENTE</span>
+                    <h3 id="comissoes-modal-titulo">Comissão de Vendedores</h3>
+                    <span id="comissoes-mes-referencia" class="historico-subdata"></span>
+                </div>
+                <div class="modal-header-actions">
+                    <button type="button" id="btn-imprimir-comissao" class="btn-primary">Imprimir Comissão</button>
+                    <div class="comissoes-perfil-switch">
+                        <button type="button" id="btn-perfil-vendedor" class="tab-btn active">Visão Vendedor</button>
+                        <button type="button" id="btn-perfil-admin" class="tab-btn">Admin (332133)</button>
+                    </div>
+                    <button type="button" id="btn-fechar-comissoes" class="btn-close">×</button>
+                </div>
+            </div>
+
+            <!-- BARRA DE SELEÇÃO DE VENDEDOR E MÊS -->
+            <div class="comissoes-topo-barra">
+                <div class="periodo-campo">
+                    <label for="select-vendedor-painel">Vendedor:</label>
+                    <select id="select-vendedor-painel"></select>
+                </div>
+                <div class="periodo-campo">
+                    <label for="input-mes-comissao">Mês de acompanhamento:</label>
+                    <input type="month" id="input-mes-comissao">
+                </div>
+                <div id="comissoes-status-permissao" class="comissoes-permissao-badge">
+                    Acesso Vendedor: exibindo apenas o desempenho do vendedor selecionado
+                </div>
+            </div>
+
+            <!-- INDICADORES DO VENDEDOR / MÊS -->
+            <div class="comissoes-kpis-grid">
+                <div class="resumo-periodo-card">
+                    <span>Meta Mensal</span>
+                    <strong id="comissao-kpi-meta">R$ 0,00</strong>
+                </div>
+                <div class="resumo-periodo-card">
+                    <span>Valor Vendido no Mês</span>
+                    <strong id="comissao-kpi-vendido" class="valor-pago">R$ 0,00</strong>
+                </div>
+                <div class="resumo-periodo-card">
+                    <span>Falta para Atingir a Meta</span>
+                    <strong id="comissao-kpi-falta" class="valor-pendente">R$ 0,00</strong>
+                </div>
+                <div class="resumo-periodo-card">
+                    <span>Meta Alcançada</span>
+                    <strong id="comissao-kpi-percentual-meta">0%</strong>
+                </div>
+                <div class="resumo-periodo-card">
+                    <span>Comissão Configurada</span>
+                    <strong id="comissao-kpi-taxa">0%</strong>
+                </div>
+                <div class="resumo-periodo-card destaque-total">
+                    <span>Comissão Acumulada (Mês)</span>
+                    <strong id="comissao-kpi-acumulada">R$ 0,00</strong>
+                </div>
+                <div class="resumo-periodo-card">
+                    <span>Vendas Confirmadas</span>
+                    <strong id="comissao-kpi-qtd-vendas">0</strong>
+                </div>
+                <div class="resumo-periodo-card">
+                    <span>Produtos Vendidos</span>
+                    <strong id="comissao-kpi-qtd-itens">0 un.</strong>
+                </div>
+            </div>
+
+            <!-- BARRA DE PROGRESSO DA META MENSAL -->
+            <div class="meta-progresso-box">
+                <div class="meta-progresso-topo">
+                    <span>Progresso da Meta Mensal</span>
+                    <strong id="meta-progresso-texto">0% concluído</strong>
+                </div>
+                <div class="grafico-trilha meta-trilha-lg">
+                    <div id="meta-progresso-barra" class="grafico-preenchimento" style="width: 0%;"></div>
+                </div>
+            </div>
+
+            <!-- PAINEL GRÁFICO DE DESEMPENHO -->
+            <div class="relatorio-grid comissoes-grid-principal">
+                <div class="relatorio-card-interno">
+                    <div class="grafico-cabecalho-titulo">
+                        <h5>Painel Gráfico de Desempenho Mensal</h5>
+                        <span id="comissao-grafico-subtitulo" class="grafico-badge-regra">Vendas Confirmadas</span>
+                    </div>
+                    <div id="grafico-desempenho-comissoes" class="grafico-barras-container"></div>
+                </div>
+
+                <div class="relatorio-card-interno">
+                    <h5>Vendas Confirmadas & Comissões Geradas</h5>
+                    <div id="lista-vendas-comissao-vendedor" class="comissoes-vendas-lista"></div>
+                </div>
+            </div>
+
+            <!-- PAINEL ADMINISTRATIVO RESTRITO (SENHA 332133) -->
+            <section id="secao-admin-comissoes" class="comissao-admin-box hidden">
+                <div class="comissao-admin-header">
+                    <div>
+                        <span class="section-kicker">ÁREA RESTRITA • CÓDIGO 332133</span>
+                        <h4>Comissão – Administrador: Edição Manual de Percentual, Meta Mensal e Vendedores</h4>
+                    </div>
+                    <button type="button" id="btn-bloquear-admin-comissoes" class="btn-secondary">Bloquear Modo Admin</button>
+                </div>
+
+                <div class="comissao-admin-grid">
+                    <div class="comissao-admin-card">
+                        <h5>Editar Comissão (%) e Meta Mensal (R$)</h5>
+                        <label for="admin-select-vendedor">Vendedor / Atendente:</label>
+                        <select id="admin-select-vendedor"></select>
+
+                        <div class="comissao-admin-inline">
+                            <div>
+                                <label for="admin-input-comissao">Comissão (%):</label>
+                                <input type="text" inputmode="decimal" id="admin-input-comissao" placeholder="Ex: 10 ou 5,5" value="10">
+                            </div>
+                            <div>
+                                <label for="admin-input-meta">Meta Mensal (R$):</label>
+                                <input type="text" inputmode="decimal" id="admin-input-meta" placeholder="Ex: 10000,00" value="5000,00">
+                            </div>
+                        </div>
+
+                        <div class="comissao-admin-acoes">
+                            <button type="button" id="btn-salvar-config-vendedor" class="btn-primary">Salvar Alterações</button>
+                        </div>
+                        <p id="admin-taxa-atual-info" class="gerenciar-desc" style="margin-top: 8px; margin-bottom: 0;"></p>
+                    </div>
+
+                    <div class="comissao-admin-card">
+                        <h5>Adicionar Novo Vendedor</h5>
+                        <label for="admin-novo-vendedor-nome">Nome do vendedor:</label>
+                        <input type="text" id="admin-novo-vendedor-nome" placeholder="Ex: Carlos Souza">
+
+                        <div class="comissao-admin-inline">
+                            <div>
+                                <label for="admin-novo-vendedor-comissao">Comissão inicial (%):</label>
+                                <input type="text" inputmode="decimal" id="admin-novo-vendedor-comissao" placeholder="Ex: 10" value="10">
+                            </div>
+                            <div>
+                                <label for="admin-novo-vendedor-meta">Meta mensal (R$):</label>
+                                <input type="text" inputmode="decimal" id="admin-novo-vendedor-meta" placeholder="Ex: 5000,00" value="5000,00">
+                            </div>
+                        </div>
+
+                        <div class="comissao-admin-acoes">
+                            <button type="button" id="btn-adicionar-vendedor" class="btn-outline-sm">+ Cadastrar Vendedor</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CONSULTA E EDIÇÃO DIRETA PELO TECLADO DE TODOS OS FUNCIONÁRIOS -->
+                <div class="crud-table-wrapper" style="margin-top: 14px;">
+                    <table class="crud-table">
+                        <thead>
+                            <tr>
+                                <th>Funcionário / Vendedor</th>
+                                <th>Comissão (%) — Editável</th>
+                                <th>Meta Mensal (R$) — Editável</th>
+                                <th>Vendido no Mês</th>
+                                <th>Comissão Acumulada</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-admin-vendedores"></tbody>
+                    </table>
+                </div>
+
+                <!-- LOG PERMANENTE DE ALTERAÇÕES ADMINISTRATIVAS -->
+                <div class="comissao-log-box">
+                    <h5>Histórico Permanente de Alterações Administrativas</h5>
+                    <div id="lista-log-admin-comissoes" class="comissao-log-lista"></div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- MODAL 9: AUTORIZAÇÃO ADMINISTRATIVA (CÓDIGO 332133) PARA COMISSÕES -->
+    <div id="modal-senha-comissao" class="modal-overlay hidden no-print" role="dialog" aria-modal="true">
+        <div class="modal-box">
+            <div class="modal-header" style="border-bottom: none; padding-bottom: 0; margin-bottom: 6px;">
+                <div>
+                    <span class="section-kicker">PERMISSÃO DO ADMINISTRADOR</span>
+                    <h3>Código de Autorização Administrativo</h3>
+                </div>
+                <button type="button" id="btn-fechar-senha-comissao-x" class="btn-close" title="Fechar">×</button>
+            </div>
+            <p class="pos-pgto-aviso">
+                Somente o administrador pode alterar porcentagens de comissão, metas mensais e gerenciar cadastros de vendedores.
+            </p>
+            <div class="campo-senha-box">
+                <label for="input-senha-comissao">Digite o código administrativo:</label>
+                <input type="password" id="input-senha-comissao" autocomplete="off" placeholder="••••••">
+                <span id="erro-senha-comissao" class="erro-senha-texto hidden">
+                    Código administrativo incorreto. Nenhuma alteração foi permitida.
+                </span>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btn-cancelar-senha-comissao" class="btn-secondary">Cancelar</button>
+                <button type="button" id="btn-confirmar-senha-comissao" class="btn-primary">Autorizar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ÁREA EXCLUSIVA DE IMPRESSÃO TÉRMICA (COMANDA, RELATÓRIO FINANCEIRO OU COMISSÃO) -->
+    <div id="area-impressao-termica" class="cupom-termico bobina-80mm">
+        <!-- MODO 1: COMPROVANTE DE COMANDA -->
+        <div id="print-bloco-comanda">
+            <div class="cupom-header">
+                <h2>RESTAURANTE DONA GLEICY</h2>
+                <p>R. Beira Rio, Flutuante Centro - Manacapuru/AM</p>
+                <p class="divider">------------------------------------------</p>
+                <p><strong>COMANDA #<span id="print-numero"></span></strong></p>
+                <p id="print-data-hora"></p>
+                <p id="print-cliente"></p>
+                <p id="print-vendedor" class="hidden"></p>
+                <p class="divider">------------------------------------------</p>
+            </div>
+
+            <div id="print-itens-lista" class="cupom-itens"></div>
+
+            <p class="divider">------------------------------------------</p>
+            <div class="cupom-totais">
+                <p class="total-line"><span>TOTAL:</span> <strong id="print-total"></strong></p>
+                <p class="pgto-line"><span>PAGAMENTO:</span> <strong id="print-pagamento"></strong></p>
+                <p class="status-line"><span>STATUS:</span> <strong id="print-status"></strong></p>
+            </div>
+
+            <div id="print-obs-container" class="cupom-obs hidden">
+                <p class="divider">------------------------------------------</p>
+                <p><strong>OBSERVAÇÕES:</strong></p>
+                <pre id="print-observacoes"></pre>
+            </div>
+
+            <div class="cupom-footer">
+                <p class="divider">------------------------------------------</p>
+                <p>Obrigado pela preferência!</p>
+
+                <!-- QR CODES DO COMPROVANTE (SOMENTE NA IMPRESSÃO) -->
+                <div id="print-qrcodes-container" class="cupom-qrcodes hidden">
+                    <div id="print-qr-wifi-bloco" class="cupom-qr-bloco hidden">
+                        <p class="cupom-qr-titulo">Wi-Fi da loja — Cortesia.</p>
+                        <img id="print-qr-wifi-img" class="cupom-qr-img" src="" alt="QR Code Wi-Fi da loja">
+                    </div>
+
+                    <div id="print-qr-pix-bloco" class="cupom-qr-bloco hidden">
+                        <p class="cupom-qr-titulo">Pix para pagamento.</p>
+                        <img id="print-qr-pix-img" class="cupom-qr-img" src="" alt="QR Code Pix da loja">
+                    </div>
+                </div>
+
+                <div class="feed-corte">.</div>
+            </div>
+        </div>
+
+        <!-- MODO 2: RELATÓRIO FINANCEIRO (DIA / MÊS / ANO) -->
+        <div id="print-bloco-relatorio" class="hidden">
+            <div class="cupom-header">
+                <h2>RESTAURANTE DONA GLEICY</h2>
+                <p>R. Beira Rio, Flutuante Centro - Manacapuru/AM</p>
+                <p class="divider">------------------------------------------</p>
+                <p><strong>RELATORIO FINANCEIRO</strong></p>
+                <p>Periodo: <strong id="print-rel-data"></strong></p>
+                <p>Emitido em: <span id="print-rel-emissao"></span></p>
+                <p class="divider">------------------------------------------</p>
+            </div>
+
+            <div class="cupom-rel-secao">
+                <p><strong>MODALIDADES DE PAGAMENTO</strong></p>
+                <div id="print-rel-tabela" class="cupom-rel-tabela"></div>
+            </div>
+
+            <p class="divider">------------------------------------------</p>
+
+            <div class="cupom-rel-secao">
+                <p><strong>GRAFICO (VALORES POR FORMA)</strong></p>
+                <div id="print-rel-grafico" class="cupom-rel-grafico"></div>
+                <p class="cupom-rel-lider">Maior movimentacao: <strong id="print-rel-lider"></strong></p>
+            </div>
+
+            <p class="divider">------------------------------------------</p>
+
+            <div class="cupom-totais">
+                <p class="pgto-line"><span>COMANDAS REGISTRADAS:</span> <strong id="print-rel-qtd-total"></strong></p>
+                <p class="pgto-line"><span>VALE-CONSUMO (SEPARADO):</span> <strong id="print-rel-vale-consumo"></strong></p>
+                <p class="total-line"><span>TOTAL GERAL RECEBIDO:</span> <strong id="print-rel-valor-total"></strong></p>
+            </div>
+
+            <div class="cupom-footer">
+                <p class="divider">------------------------------------------</p>
+                <p>Fechamento de Caixa Conferido</p>
+                <div class="feed-corte">.</div>
+            </div>
+        </div>
+
+        <!-- MODO 3: RELATÓRIO DE COMISSÃO DO VENDEDOR / ATENDENTE -->
+        <div id="print-bloco-comissao" class="hidden">
+            <div class="cupom-header">
+                <h2>RESTAURANTE DONA GLEICY</h2>
+                <p>R. Beira Rio, Flutuante Centro - Manacapuru/AM</p>
+                <p class="divider">------------------------------------------</p>
+                <p><strong>RELATORIO DE COMISSAO</strong></p>
+                <p>Funcionario: <strong id="print-com-vendedor"></strong></p>
+                <p>Mes Referencia: <strong id="print-com-mes"></strong></p>
+                <p>Emitido em: <span id="print-com-emissao"></span></p>
+                <p class="divider">------------------------------------------</p>
+            </div>
+
+            <div class="cupom-totais">
+                <p class="pgto-line"><span>META MENSAL:</span> <strong id="print-com-meta"></strong></p>
+                <p class="pgto-line"><span>VALOR VENDIDO:</span> <strong id="print-com-vendido"></strong></p>
+                <p class="pgto-line"><span>FALTA P/ META:</span> <strong id="print-com-falta"></strong></p>
+                <p class="pgto-line"><span>META ALCANCADA:</span> <strong id="print-com-pct-meta"></strong></p>
+                <p class="pgto-line"><span>VENDAS / ITENS:</span> <strong id="print-com-qtd"></strong></p>
+                <p class="pgto-line"><span>TAXA COMISSAO:</span> <strong id="print-com-taxa"></strong></p>
+                <p class="total-line"><span>COMISSAO ACUMULADA:</span> <strong id="print-com-acumulada"></strong></p>
+            </div>
+
+            <p class="divider">------------------------------------------</p>
+
+            <div class="cupom-rel-secao">
+                <p><strong>VENDAS CONFIRMADAS NO MES</strong></p>
+                <div id="print-com-lista-vendas" class="cupom-rel-tabela"></div>
+            </div>
+
+            <div class="cupom-footer">
+                <p class="divider">------------------------------------------</p>
+                <p>Demonstrativo de Comissao Conferido</p>
+                <div class="feed-corte">.</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
